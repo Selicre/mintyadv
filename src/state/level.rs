@@ -39,10 +39,8 @@ impl LevelState {
         self.entities.init_with(&data::ENTITY_LIST[l..r]);
         //self.particles.init();
         let e = &mut self.entities.inner;
-        /*
-        e[63].kind.init_kind(1);
-        e[63].kind.init(&mut e[63].data);
-        e[63].data.pos = vec2(0x2000, 0xD000);*/
+        e[31].init(1);
+        e[31].data.pos = vec2(0x4000, 0x4000);
 
         self.coins = 0;
         self.health = 3;
@@ -53,14 +51,23 @@ impl LevelState {
             self.init();
         }
 
-        if b.left() { self.camera.x -= 4; }
-        if b.right() { self.camera.x += 4; }
-        if b.up() { self.camera.y -= 4; }
-        if b.down() { self.camera.y += 4; }
+        //if b.left() { self.camera.x -= 4; }
+        //if b.right() { self.camera.x += 4; }
+        //if b.up() { self.camera.y -= 4; }
+        //if b.down() { self.camera.y += 4; }
         //self.particles.process();
         self.entities.process();
 
-        //self.camera = self.entities.inner[63].data.visual_pos() - Framebuffer::size()/2;
+        let followed_slot = 31;
+
+        let e = &self.entities.inner[followed_slot];
+        let pivot = e.data.visual_pos() - Framebuffer::size()/2;
+
+
+        self.camera += (pivot - self.camera).zip(
+            e.data.vel,
+            |c,v| c.signum() * (c.abs() - 4).max(0)
+        );
         self.camera.x = self.camera.x.max(0).min(self.fg.width()  as i32 * 16 - Framebuffer::size().x);
         self.camera.y = self.camera.y.max(6).min(self.fg.height() as i32 * 16 - Framebuffer::size().y - 6);
 

@@ -29,14 +29,34 @@ impl Foreground {
     pub fn mut_ptr_at(&mut self, pos: Vec2<i32>) -> *mut u8 {
         unsafe { self.blocks.as_mut_ptr().add(self.block_at(pos)) }
     }
+    pub fn render_old(&self, offset: Vec2<i32>, fb: &mut Framebuffer) {
+        let block_pos = offset >> 4;
+        let inner = offset & 0xF;
+        for y in 0..=Framebuffer::size().y / 16 {
+            for x in 0..=Framebuffer::size().x / 16 {
+                let pos = block_pos + vec2(x,y);
+                let block = self.blocks[self.block_at(pos)] as usize;
+                if block > 0 {
+                    let gfx = &data::BLOCKS.data()[block*256..block*256+256];
+                    for (i,px) in gfx.iter().enumerate() {
+                        if *px > 0 {
+                            let pos = vec2((x << 4) + (i as i32 & 0xF), (y << 4) + (i as i32 >> 4)) - inner;
+                            let c = fb.pixel(pos).unwrap();
+                            *c = data::BLOCKS.pal()[*px as usize];
+                        }
+                    }
+                }
+            }
+        }
+    }
     pub fn render(&self, offset: Vec2<i32>, fb: &mut Framebuffer) {
         for (pos,i) in fb.pixels() {
             //if pos.y == 0 { continue; }
             let pos = pos + offset;
-            if !self.in_bounds(pos >> 4) {
+            /*if !self.in_bounds(pos >> 4) {
                 *i = 0x00000000;
                 continue;
-            }
+            }*/
             let block = self.blocks[self.block_at(pos >> 4)] as usize;
             let block_top = self.blocks[self.block_at((pos >> 4) + vec2(0,1))] as usize;
             let block_top = if block_top >= 0x30 && block_top < 0x38 {
@@ -86,7 +106,9 @@ pub fn collision(b: u8) -> Collision {
         0x40 ..= 0x43 => Solid,
         0x50 ..= 0x53 => Solid,
         0x60 ..= 0x63 => Solid,
+        0x70 ..= 0x73 => Solid,
         0x34 ..= 0x37 => Semisolid,
+        0x38 ..= 0x3A => Semisolid,
         _ => None
     }
 }

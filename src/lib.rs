@@ -15,11 +15,14 @@ mod background;
 use crate::framebuffer::Framebuffer;
 use crate::state::GameState;
 
+
 #[panic_handler]
 unsafe fn handle_panic(_: &core::panic::PanicInfo) -> ! {
     // Where we're going, we don't need safety.
     core::hint::unreachable_unchecked()
 }
+
+
 unsafe fn copy_fwd(src: *const u8, dest: *mut u8, n: usize) {
     let mut i = 0;
     while i < n {

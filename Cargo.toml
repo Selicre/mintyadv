@@ -15,7 +15,7 @@ crate-type = ["cdylib"]
 lto = true
 opt-level = 'z'
 panic = "abort"
-debug = true
+# debug = true
 
 [dependencies]
 
