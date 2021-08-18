@@ -20,3 +20,8 @@ jobs:
       run: rustup target add wasm32-unknown-unknown
     - name: Build
       run: cargo build --verbose --target wasm32-unknown-unknown --lib --release
+    - name: Capture build artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: Artifacts
+        path: target/wasm32-unknown-unknown/release/mintyadv.wasm
