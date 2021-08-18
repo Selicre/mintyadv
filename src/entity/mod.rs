@@ -1,7 +1,6 @@
 use crate::vec2::{Vec2, vec2};
 use crate::Framebuffer;
 use crate::data::DataDef;
-use crate::utils::ArrayVec;
 
 mod player;
 
