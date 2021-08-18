@@ -60,7 +60,9 @@ impl Foreground {
             let block = self.blocks[self.block_at(pos >> 4)] as usize;
             let block_top = self.blocks[self.block_at((pos >> 4) + vec2(0,1))] as usize;
             let block_top = if block_top >= 0x30 && block_top < 0x38 {
-                (block_top - 0x10) & 0xF3
+                (block_top - 0x30 + 0x100) & 0x1F3
+            } else if block_top == 0x0F {
+                0x10F
             } else {
                 0
             };

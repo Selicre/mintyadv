@@ -33,10 +33,10 @@ impl TitleState {
         let x = (Framebuffer::size().x - 8 * text.len() as i32)/2;
         crate::utils::draw_text(data::BOLDFACE, text, vec2(x,8), fb);
 
-        crate::utils::draw_text(data::BOLDFACE, b"SALTINE PLAINS 1", vec2(32, 32), fb);
-        crate::utils::draw_text(data::BOLDFACE, b"SALTINE PLAINS 2", vec2(32, 40), fb);
-        crate::utils::draw_text(data::BOLDFACE, b"SALTINE PLAINS 3", vec2(32, 48), fb);
-        crate::utils::draw_text(data::BOLDFACE, b"SALTINE PLAINS 4", vec2(32, 56), fb);
+        crate::utils::draw_text(data::BOLDFACE, b"1-1-1 FRENCH FRY FIELDS", vec2(32, 32), fb);
+        crate::utils::draw_text(data::BOLDFACE, b"1-1-2", vec2(32, 40), fb);
+        crate::utils::draw_text(data::BOLDFACE, b"1-1-3", vec2(32, 48), fb);
+        crate::utils::draw_text(data::BOLDFACE, b"1-1-4", vec2(32, 56), fb);
 
         crate::utils::draw_text(data::BOLDFACE, b"-", vec2(16, 32 + self.selected as i32 * 8), fb);
 
@@ -49,6 +49,7 @@ impl TitleState {
                 let st = crate::state();
                 st.id = GameStateId::Level;
                 st.as_level().init_flag = true;
+                st.as_level().reset_flag = true;
                 st.as_level().room = v;
                 return;
             }

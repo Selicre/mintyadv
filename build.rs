@@ -40,9 +40,17 @@ struct LevelDef {
     offset: usize,
     width: u8,
     height: u8,
+    start_pos: Field,
 }
 
 def_impl!(LevelDef);
+
+struct Field(String);
+impl std::fmt::Debug for Field {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        fmt.pad(&self.0)
+    }
+}
 
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
@@ -77,7 +85,7 @@ fn main() {
     let mut ent = String::new();
     let mut ent_len = 0;
 
-    let count = 2;
+    let count = 3;
 
     writeln!(f, "pub static LEVEL_COUNT: usize = {};", count);
 
@@ -119,10 +127,16 @@ fn embed_map(level: &serde_json::Value, data: &mut Vec<u8>) -> LevelDef {
     }
     let width = level["width"].as_u64().unwrap() as u8;
     let height = level["height"].as_u64().unwrap() as u8;
+    let entities = &level["layers"][1]["objects"].as_array().unwrap();
+    let list = entities.iter().map(|c| c["gid"].as_u64().unwrap()).collect::<Vec<_>>();
+    let start_pos = entities.iter().find(|c| c["gid"].as_u64().unwrap() & 0xFFF == 0x210).map(|c| {
+        Field(format!("vec2({}, {})", c["x"].as_u64().unwrap() * 256, c["y"].as_u64().unwrap() * 256))
+    }).expect(&format!("{:?}", list));
     LevelDef {
         offset,
         width,
-        height
+        height,
+        start_pos
     }
 }
 
@@ -135,7 +149,7 @@ fn embed_entities(level: &serde_json::Value, out: &mut String, len: &mut usize) 
         let x = (i["x"].as_u64().unwrap() / 0x10) as u8 + 1;
         let y = (i["y"].as_u64().unwrap() / 0x10) as u8 - 1;
         let id = match i["gid"].as_u64().unwrap() & 0xFFF {
-            0x101 => 2,
+            0x111 => 2,
             //0x45 => 3,
             //0x49 => 4,
             //0x51 => 5,

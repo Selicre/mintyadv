@@ -15,6 +15,7 @@ pub struct LevelState {
     //pub particles: ParticleSet,
     pub camera: Vec2<i32>,
     pub init_flag: bool,
+    pub reset_flag: bool,
     pub room: usize,
     pub coins: i32,
     pub health: i32,
@@ -25,13 +26,10 @@ pub struct LevelState {
 impl LevelState {
     pub fn init(&mut self) {
         if self.room >= data::LEVEL_COUNT {
-            let s = crate::state();
-            s.id = GameStateId::Title;
-            s.as_title().init_flag = true;
             return;
         }
+        let map = &data::MAPS[self.room];
         unsafe {
-            let map = &data::MAPS[self.room];
             self.fg.init(map.width as _, map.height as _);
             crate::copy_fwd(map.data().as_ptr(), self.fg.blocks.as_mut_ptr(), self.fg.blocks.len());
         }
@@ -40,12 +38,23 @@ impl LevelState {
         //self.particles.init();
         let e = &mut self.entities.inner;
         e[31].init(1);
-        e[31].data.pos = vec2(0x4000, 0x4000);
+        e[31].data.pos = map.start_pos;
+        //e[2].init(2);
+        //e[2].data.pos = vec2(0x4000, 0x4000);
 
-        self.coins = 0;
-        self.health = 3;
+        if self.reset_flag {
+            self.coins = 0;
+            self.health = 3;
+            self.reset_flag = false;
+        }
     }
     pub fn run(&mut self, fb: &mut Framebuffer, b: Buttons) {
+        if self.room >= data::LEVEL_COUNT {
+            let s = crate::state();
+            s.id = GameStateId::Title;
+            s.as_title().init_flag = true;
+            return;
+        }
         if self.init_flag {
             self.init_flag = false;
             self.init();

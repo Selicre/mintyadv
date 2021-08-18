@@ -1,5 +1,6 @@
 use crate::lz4;
 use crate::entity::EntityEntry;
+use crate::vec2::{vec2,Vec2};
 
 pub struct DataDef {
     pub offset: usize,
@@ -18,7 +19,8 @@ impl DataDef {
 pub struct LevelDef {
     pub offset: usize,
     pub width: u8,
-    pub height: u8
+    pub height: u8,
+    pub start_pos: Vec2<i32>
 }
 
 impl LevelDef {

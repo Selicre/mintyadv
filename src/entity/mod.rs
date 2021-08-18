@@ -1,6 +1,7 @@
 use crate::vec2::{Vec2, vec2};
 use crate::Framebuffer;
 use crate::data::DataDef;
+use crate::utils::ArrayVec;
 
 mod player;
 
@@ -20,6 +21,7 @@ pub struct EntityEntry {
 }
 
 pub struct Sprite {
+    active: bool,
     source: DataDef,
     offset: Vec2<i32>,
     frame: i32
@@ -32,10 +34,11 @@ pub struct EntityData {
     pub on_ground: bool,
     pub sensors: [*mut u8; 6],
     pub sensor_pos: [Vec2<i32>; 6],
-    pub hflip: bool,
+    pub flip: Vec2<bool>,
     pub next_pos: Vec2<i32>,
     pub radius: Vec2<i32>,
     pub sprite: Sprite,
+    pub sprites: [Sprite; 4],
     pub anim_timer: i32,
 }
 
@@ -75,16 +78,22 @@ impl EntityKind {
                 p.init();
                 data.vel = vec2(0,0);
                 data.radius = vec2(0x400, 0xE00);
-                data.sprite.source = crate::data::TOOTHPASTE;
-                data.sprite.offset = vec2(-16, -16);
-                data.sprite.frame = 0;
+                data.sprites[0].active = true;
+                data.sprites[0].source = crate::data::TOOTHPASTE;
+                data.sprites[0].offset = vec2(-16, -16);
+                data.sprites[0].frame = 0x10;
+                data.sprites[1].active = true;
+                data.sprites[1].source = crate::data::TOOTHPASTE;
+                data.sprites[1].offset = vec2(-16, -16);
+                data.sprites[1].frame = 0;
             },
             EntityKind::Tomato => {
                 data.radius = vec2(0x400, 0x400);
-                data.hflip = true;
-                data.sprite.source = crate::data::ENTITIES;
-                data.sprite.offset = vec2(-16, -26);
-                data.sprite.frame = 0;
+                data.flip.x = true;
+                data.sprites[0].active = true;
+                data.sprites[0].source = crate::data::ENTITIES;
+                data.sprites[0].offset = vec2(-16, -26);
+                data.sprites[0].frame = 0;
             },
             _ => {}
         }
@@ -101,11 +110,16 @@ impl EntityKind {
                 data.anim_timer -= 1;
                 if data.anim_timer == 0 { *self = EntityKind::None; data.pos = vec2(0,0); }
             }
+            EntityState::Dead => {
+                data.pos += data.vel;
+                data.vel.y += 0x30;
+                data.flip.y = true;
+            }
             EntityState::Alive => match self {
                 EntityKind::None => {},
                 EntityKind::Player(p) => p.run(data),
                 EntityKind::Tomato => {
-                    if data.hflip {
+                    if data.flip.x {
                         data.vel.x = -0x60;
                     } else {
                         data.vel.x = 0x60;
@@ -116,7 +130,7 @@ impl EntityKind {
                         data.vel.y += 0x30;
                     }
                     data.anim_timer += 0x1;
-                    data.sprite.frame = match data.anim_timer / 10 & 3 {
+                    data.sprites[0].frame = match data.anim_timer / 10 & 3 {
                         0 => 0,
                         1 => 1,
                         2 => 2,
@@ -124,7 +138,7 @@ impl EntityKind {
                         _ => panic!()
                     };
                     data.physics();
-                    if data.vel.x == 0 { data.hflip = !data.hflip; }
+                    if data.vel.x == 0 { data.flip.x = !data.flip.x; }
                 }
                 _ => {}
             }
@@ -144,11 +158,12 @@ impl EntitySet {
     pub fn init_with(&mut self, list: &[EntityEntry]) {
         for idx in 0..32 {
             self.inner[idx].data.init();
+            let e = &mut self.inner[idx];
             if let Some(c) = list.get(idx) {
-                self.inner[idx].init(c.kind);
-                self.inner[idx].data.pos = vec2(c.x as i32, c.y as i32) * 0x1000 + 0x800;
+                e.init(c.kind);
+                e.data.pos = vec2(c.x as i32, c.y as i32) * 0x1000 + vec2(0x800, 0xF00-e.data.radius.y);
             } else {
-                self.inner[idx].kind = EntityKind::None;
+                e.kind = EntityKind::None;
             }
         }
     }
@@ -179,28 +194,40 @@ impl EntityData {
         dist.x < rad.x && dist.y < rad.y
     }
     pub fn render(&self, camera: Vec2<i32>, fb: &mut Framebuffer) {
-        let spr = &self.sprite;
-        let data = spr.source.data();
-        let pal = spr.source.pal();
-        /*for x in -self.radius.x/256..=self.radius.x/256 {
-            for y in -self.radius.y/256..=self.radius.y/256 {
-                let mut pos = self.visual_pos() + vec2(x as i32, y as i32) - camera;
-                fb.pixel(pos).map(|c| *c = *c & 0x7FFFFFFF);
-            }
-        }*/
-        for mut x in 0..32 {
-            for y in 0..32 {
-                let mut pos = self.visual_pos() + vec2(x as i32, y as i32) - camera + spr.offset;
-                if self.hflip {
-                    //pos.x -= i.offset.x * 2;
-                    x = 31 - x;
+        for spr in self.sprites.iter().filter(|c| c.active) {
+            let data = spr.source.data();
+            let pal = spr.source.pal();
+            for mut x in 0..32 {
+                for mut y in 0..32 {
+                    let mut pos = self.visual_pos() + vec2(x as i32, y as i32) - camera + spr.offset;
+                    if self.flip.x {
+                        //pos.x -= i.offset.x * 2;
+                        x = 31 - x;
+                    }
+                    if self.flip.y {
+                        //pos.x -= i.offset.x * 2;
+                        y = 31 - y;
+                    }
+                    let px = data[x+y*32 + spr.frame as usize *32*32];
+                    if px != 0 {
+                        let px = pal[px as usize];
+                        fb.pixel(pos).map(|c| *c = px);
+                    }
                 }
-                let px = data[x+y*32 + spr.frame as usize *32*32];
-                if px != 0 {
-                    let px = pal[px as usize];
-                    fb.pixel(pos).map(|c| *c = px);
+            }
+            /*
+            for x in -self.radius.x/256..self.radius.x/256+1 {
+                for y in -self.radius.y/256..self.radius.y/256+1 {
+                    let mut pos = self.visual_pos() + vec2(x as i32, y as i32) - camera;
+                    fb.pixel(pos).map(|c| *c = *c & 0x7FFFFFFF);
                 }
             }
+            let pos = self.visual_pos() - camera;
+            fb.pixel(pos).map(|c| *c = 0xFFFF2020);
+            for i in self.sensor_pos.iter() {
+                let pos = *i / 256 - camera;
+                fb.pixel(pos).map(|c| *c = 0xFF0000FF);
+            }*/
         }
     }
     pub fn physics(&mut self) {
